@@ -1,12 +1,15 @@
 import logging
+from builtins import print
 from os import listdir
 from os.path import splitext
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+from torchvision import transforms
 
 
 class BasicDataset(Dataset):
@@ -38,7 +41,7 @@ class BasicDataset(Dataset):
         elif not is_mask:
             img_ndarray = img_ndarray.transpose((2, 0, 1))
 
-        if not is_mask:
+        if is_mask:
             img_ndarray = img_ndarray / 255
 
         return img_ndarray
@@ -47,7 +50,7 @@ class BasicDataset(Dataset):
     def load(cls, filename):
         ext = splitext(filename)[1]
         if ext in ['.npz', '.npy']:
-            return Image.fromarray(np.load(filename))
+            return Image.fromarray(np.transpose((np.load(filename) * 255).astype(np.uint8)))
         elif ext in ['.pt', '.pth']:
             return Image.fromarray(torch.load(filename).numpy())
         else:
@@ -55,13 +58,19 @@ class BasicDataset(Dataset):
 
     def __getitem__(self, idx):
         name = self.ids[idx]
-        mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
+        mask_file = list(self.masks_dir.glob(name + '.npy')) #self.mask_suffix + '.*'))
         img_file = list(self.images_dir.glob(name + '.*'))
 
         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
+
+        # plt.imshow(mask, interpolation="bicubic")
+        # plt.show()
+        #
+        # plt.imshow(img, interpolation="bicubic")
+        # plt.show()
 
         assert img.size == mask.size, \
             'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
