@@ -23,9 +23,9 @@ def predict_img(net,
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
-    image = torch.squeeze(img)
-    plt.imshow(transforms.ToPILImage()(image.cpu().detach()), interpolation="bicubic")
-    plt.show()
+    # image = torch.squeeze(img)
+    # plt.imshow(transforms.ToPILImage()(image.cpu().detach()), interpolation="bicubic")
+    # plt.show()
     with torch.no_grad():
         output = net(img)
         arr = output.cpu().detach().numpy()

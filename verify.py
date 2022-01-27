@@ -1,8 +1,10 @@
 # -*- coding: UTF-8 -*-
 import os
 import pickle
+import time
 from typing import Tuple
 
+import matplotlib.pyplot as plt
 import numpy
 from PIL import Image
 
@@ -60,41 +62,52 @@ class ValidationSet(Dataset):
         }
 
 
-
 def get_centroid(mask):
-    highest = ()
+    highest = 0
+    lowest = 0
+    width = 0
 
     height = 0
-    for row in mask[1]:
-        if row.any() == 0:
+    for row in mask:
+        if row.any() == 1:
             for i in range(len(row)):
-                width = 0
-                if i == 1:
-                    highest = (height, width)
-
-                    while not mask[height, width] == 0:
+                if row[i] == 1:
+                    highest = height
+                    while not mask[height, i] == 0:
                         height += 1
 
-                    lowest = (height, width)
-
-                width += 1
+                    lowest = height
+                    width = i
+                    break
+            break
         height += 1
+
+    centroid = highest + (lowest - highest) / 2
+    return width * 2, centroid * 2
 
 
 
 
 if __name__ == "__main__":
-    batch_size = 2
+    start = time.time()
+    batch_size = 1
+    n_correct = 0
+    n_samples = 0
+
     device = torch.device('cuda')
     net = UNet(n_channels=3, n_classes=2, bilinear=True)
-    net.load_state_dict(torch.load('/home/lennit/Desktop/Kurs/Pytorch-UNet/checkpoint_epoch8.pth',
+    net.load_state_dict(torch.load('/home/lennit/Desktop/Kurs/Pytorch-UNet/checkpoint_epoch17.pth',
                                    map_location=device))
     net.to(device)
+    net.train()
+    # net.eval()
 
     dataset = ValidationSet()
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
+    step = 0
     for batch in data_loader:
+        step += 1
         images = batch['image']
         polygons = batch['polygon']
 
@@ -106,44 +119,23 @@ if __name__ == "__main__":
             for i in range(batch_size):
                 output = pred[i]
 
-                if net.n_classes > 1:
-                    probs = F.softmax(output, dim=1)[0]
+                mask = torch.softmax(pred, dim=1).argmax(dim=1).float().cpu()[0]
+                mask = mask.cpu().numpy()
+                centroid = get_centroid(mask)
+
+                verify = Verify(polygons[i])
+                if not verify.intersect(centroid):
+                    pass
+                    # print(f'{polygons} failed.')
+                    # plt.imshow(mask)
+                    # plt.show()
                 else:
-                    probs = torch.sigmoid(output)[0]
+                    n_correct += 1
+                n_samples += 1
 
-                tf = transforms.Compose([
-                    transforms.ToPILImage(),
-                    transforms.Resize((1000, 1000)),
-                    transforms.ToTensor()
-                ])
-
-                full_mask = tf(probs.cpu()).squeeze()
-                image = tf(images[i].cpu().cpu()).squeeze()
-                mask = (full_mask.argmax(dim=0)).numpy()
-                # if net.n_classes == 1:
-                #     mask = (full_mask > 0.5).numpy()
-                # else:
-                #     mask = F.one_hot(full_mask.argmax(dim=0), net.n_classes).numpy()
-
-                utils.plot_img_and_mask(image, mask)
-
-
-
-    mask = predict.predict_img(net, image, device)
-    print(get_centroid(mask))
-
-        # if net.n_classes > 1:
-        #     probs = F.softmax(output, dim=1)[0]
-        # else:
-        #     probs = torch.sigmoid(output)[0]
-        #
-        # tf = transforms.Compose([
-        #     transforms.ToPILImage(),
-        #     transforms.Resize((image.size[1], image.size[0])),
-        #     transforms.ToTensor()
-        # ])
-        #
-        # full_mask = tf(probs.cpu()).squeeze()
-        # print(full_mask)
-        # mask = F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
-        # zero = mask.any() == 0
+        if step % 100 == 0:
+            print(f'{step}/10000: current accuracy {n_correct/n_samples * 100}%')
+    end = time.time()
+    print('Testing finished.')
+    print(f'Process took {(end - start) / 60} min, that\'s an average of {(end - start) /10000} seconds per image!')
+    print(f'Result: {n_correct} of {n_samples} correct -> {n_correct/n_samples * 100}%')
