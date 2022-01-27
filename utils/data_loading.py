@@ -31,10 +31,16 @@ class BasicDataset(Dataset):
     @classmethod
     def preprocess(cls, pil_img, scale, is_mask):
         w, h = pil_img.size
+        # plt.imshow(pil_img, interpolation="bicubic")
+        # plt.show()
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
+        # plt.imshow(pil_img, interpolation="bicubic")
+        # plt.show()
         img_ndarray = np.asarray(pil_img)
+        # plt.imshow(transforms.ToPILImage()(img_ndarray), interpolation="bicubic")
+        # plt.show()
 
         if img_ndarray.ndim == 2 and not is_mask:
             img_ndarray = img_ndarray[np.newaxis, ...]
@@ -58,7 +64,7 @@ class BasicDataset(Dataset):
 
     def __getitem__(self, idx):
         name = self.ids[idx]
-        mask_file = list(self.masks_dir.glob(name + '.npy')) #self.mask_suffix + '.*'))
+        mask_file = list(self.masks_dir.glob(name + '.npy'))  # self.mask_suffix + '.*'))
         img_file = list(self.images_dir.glob(name + '.*'))
 
         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'

@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import os
 import pickle
 from typing import Tuple
 
@@ -8,13 +9,16 @@ from PIL import Image
 from shapely.geometry import Polygon, Point
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import transforms
 import torch.nn.functional as F
+from tqdm import tqdm
 
 import predict
+from utils import data_loading
 from unet import UNet
 from utils.data_loading import BasicDataset
+from utils import utils
 
 
 class Verify:
@@ -34,6 +38,27 @@ class Verify:
 
     def intersect(self, point: Tuple[float, float]):
         return Point(point).within(self.based_polygon)
+
+
+class ValidationSet(Dataset):
+
+    def __init__(self):
+        return
+
+    def __len__(self):
+        return 10000
+
+    def __getitem__(self, index):
+        path = r"/home/lennit/Desktop/Kurs/CaptchaVAL/Output/"  # I know thats bad
+        image = Image.open(os.path.join(path, f'captcha_{index}_val.png'))
+
+        image = BasicDataset.preprocess(image, scale=0.5, is_mask=False)
+
+        return {
+            'image': torch.as_tensor(image.copy()).float().contiguous(),  # passing back the image
+            'polygon': os.path.join(path, f'captcha_{index}_val.polygon')  # passing back the path to poly file as label
+        }
+
 
 
 def get_centroid(mask):
@@ -57,55 +82,52 @@ def get_centroid(mask):
 
 
 
-def get_images(batch, batch_size):
-    images = []
-    path = "/home/lennit/Desktop/Kurs/Validation/captcha_"
-    for i in range(batch_size):
-        img = Image.open(path + str(batch * 10 + i) + "_val.png")
-        images.append(img)
-    return images
 
-def get_polygons(batch, batch_size):
-    polygons = []
-    path = "/home/lennit/Desktop/Kurs/Validation/captcha_"
-    for i in range(batch_size):
-        poly = Image.open(path + str(batch * 10 + i) + "_val.polygon")
-        polygons.append(poly)
-    return polygons
+if __name__ == "__main__":
+    batch_size = 2
+    device = torch.device('cuda')
+    net = UNet(n_channels=3, n_classes=2, bilinear=True)
+    net.load_state_dict(torch.load('/home/lennit/Desktop/Kurs/Pytorch-UNet/checkpoint_epoch8.pth',
+                                   map_location=device))
+    net.to(device)
 
+    dataset = ValidationSet()
+    data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
-def verify(net, batch_size):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    net.eval()
+    for batch in data_loader:
+        images = batch['image']
+        polygons = batch['polygon']
 
+        images = images.to(device=device, dtype=torch.float32)
 
-
-    with torch.no_grad():
-        n_samples = 0
-        n_correct = 0
-        batches = 10000 / batch_size
-
-        for batch in range(batches):
-            images = get_images(batch, batch_size)
+        with torch.cuda.amp.autocast(enabled=True):
             pred = net(images)
 
             for i in range(batch_size):
-                centroid = get_centroid(pred[i])
-                v = Verify(f'/home/lennit/Desktop/Kurs/Validation/captcha_{batch * 10 + i}_val.polygon')
+                output = pred[i]
 
-                if not v.intersect(centroid):
-                    print(f'captcha_{batch * 10 + i} wurde nicht erkannt.')
+                if net.n_classes > 1:
+                    probs = F.softmax(output, dim=1)[0]
                 else:
-                    n_correct += 1
-                n_samples += 1
+                    probs = torch.sigmoid(output)[0]
 
-if __name__ == "__main__":
-    device = torch.device('cuda')
-    net = UNet(n_channels=3, n_classes=2, bilinear=True)
-    net.load_state_dict(torch.load(r'C:\Users\lenna\sciebo\Semester 5\Captcha\Workspace\Pytorch-UNet\checkpoints\checkpoint_epoch7.pth',
-                                   map_location=device))
-    net.to(device)
-    image = Image.open(r'C:\Users\lenna\sciebo\Semester 5\Captcha\CaptchaVAL\Output\captcha_0_val.png')
+                tf = transforms.Compose([
+                    transforms.ToPILImage(),
+                    transforms.Resize((1000, 1000)),
+                    transforms.ToTensor()
+                ])
+
+                full_mask = tf(probs.cpu()).squeeze()
+                image = tf(images[i].cpu().cpu()).squeeze()
+                mask = (full_mask.argmax(dim=0)).numpy()
+                # if net.n_classes == 1:
+                #     mask = (full_mask > 0.5).numpy()
+                # else:
+                #     mask = F.one_hot(full_mask.argmax(dim=0), net.n_classes).numpy()
+
+                utils.plot_img_and_mask(image, mask)
+
+
 
     mask = predict.predict_img(net, image, device)
     print(get_centroid(mask))

@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -22,9 +23,12 @@ def predict_img(net,
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
+    image = torch.squeeze(img)
+    plt.imshow(transforms.ToPILImage()(image.cpu().detach()), interpolation="bicubic")
+    plt.show()
     with torch.no_grad():
         output = net(img)
-
+        arr = output.cpu().detach().numpy()
         if net.n_classes > 1:
             probs = F.softmax(output, dim=1)[0]
         else:
@@ -95,7 +99,8 @@ if __name__ == '__main__':
     for i, filename in enumerate(in_files):
         logging.info(f'\nPredicting image {filename} ...')
         img = Image.open(filename)
-
+        plt.imshow(img, interpolation="bicubic")
+        plt.show()
         mask = predict_img(net=net,
                            full_img=img,
                            scale_factor=args.scale,
@@ -106,6 +111,7 @@ if __name__ == '__main__':
             out_filename = out_files[i]
             result = mask_to_image(mask)
             result.save(out_filename)
+            print(filename)
             logging.info(f'Mask saved to {out_filename}')
 
         if args.viz:
