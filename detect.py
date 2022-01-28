@@ -37,7 +37,7 @@ class DetectSet(Dataset):
         }
 
 if __name__ == '__main__':
-    device = torch.device('cuda')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     net = UNet(n_channels=3, n_classes=2, bilinear=True)
     net.load_state_dict(torch.load('/home/lennit/Desktop/Kurs/Pytorch-UNet/checkpoint_epoch17.pth',
                                    map_location=device))
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
         mask = torch.softmax(pred, dim=1).argmax(dim=1).float().cpu()[0]
         mask = mask.cpu().numpy()
-        centroid = verify.get_centroid(mask)
+        centroid = verify.get_centroid_center_of_gravity(mask)
 
         verify = verify.Verify(batch['polygon'][0])
         print(f"Check result: {verify.intersect(centroid)}")

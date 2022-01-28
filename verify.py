@@ -47,6 +47,7 @@ class Verify:
         return Point(point).within(self.based_polygon)
 
 
+
 class ValidationSet(Dataset):
 
     def __init__(self):
@@ -78,18 +79,37 @@ def get_centroid(mask):
             for i in range(len(row)):
                 if row[i] == 1:
                     highest = height
-                    if is_vaild(mask, i, height):
-                        while not mask[height, i] == 0:
-                            height += 1
+                    #if is_vaild(mask, i, height):
+                    while not mask[height, i] == 0:
+                        height += 1
 
-                        lowest = height
-                        width = i
-                        break
+                    lowest = height
+                    width = i
+                    break
             break
         height += 1
 
     centroid = highest + (lowest - highest) / 2
     return width * 2, centroid * 2
+
+
+def get_centroid_center_of_gravity(mask):
+    n_one = 0
+    row_sum = 0
+    column_sum = 0
+
+    h = 0
+    for row in mask:
+        h += 1
+        if row.any() == 1:
+            for column in range(len(row)):
+                if row[column] == 1:
+                    n_one += 1
+                    row_sum += h
+                    column_sum += column
+    if not n_one == 0:
+        return (column_sum / n_one) * 2, (row_sum / n_one) * 2
+    return 0, 0
 
 
 def is_vaild(mask, x, y):
@@ -98,7 +118,7 @@ def is_vaild(mask, x, y):
         for check_y in range(y, y + 5):
             if mask[check_y][check_x] == 1:
                 h += 1
-                if h > 20:
+                if h > 10:
                     return True
     return False
 
@@ -136,7 +156,7 @@ if __name__ == "__main__":
 
                 mask = torch.softmax(pred, dim=1).argmax(dim=1).float().cpu()[0]
                 mask = mask.cpu().numpy()
-                centroid = get_centroid(mask)
+                centroid = get_centroid_center_of_gravity(mask)
 
                 verify = Verify(polygons[i])
                 if not verify.intersect(centroid):
