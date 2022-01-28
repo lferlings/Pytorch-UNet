@@ -78,12 +78,13 @@ def get_centroid(mask):
             for i in range(len(row)):
                 if row[i] == 1:
                     highest = height
-                    while not mask[height, i] == 0:
-                        height += 1
+                    if is_vaild(mask, i, height):
+                        while not mask[height, i] == 0:
+                            height += 1
 
-                    lowest = height
-                    width = i
-                    break
+                        lowest = height
+                        width = i
+                        break
             break
         height += 1
 
@@ -91,6 +92,15 @@ def get_centroid(mask):
     return width * 2, centroid * 2
 
 
+def is_vaild(mask, x, y):
+    h = 0
+    for check_x in range(x - 6, x + 6):
+        for check_y in range(y, y + 5):
+            if mask[check_y][check_x] == 1:
+                h += 1
+                if h > 20:
+                    return True
+    return False
 
 
 if __name__ == "__main__":
@@ -134,7 +144,7 @@ if __name__ == "__main__":
                     fig, ax = plt.subplots(1, 2)
                     ax[0].imshow(images[i].cpu().permute(1, 2, 0).numpy().astype('uint8'))
                     ax[1].imshow(mask)
-                    plt.savefig(os.path.join("fails", f"captcha_{step - 1}_val.png"))
+                    plt.savefig(os.path.join("fails2", f"captcha_{step - 1}_val.png"))
 
                 else:
                     n_correct += 1
