@@ -5,7 +5,6 @@ import time
 from typing import Tuple
 
 import matplotlib.pyplot as plt
-import numpy
 from PIL import Image
 
 from shapely.geometry import Polygon, Point
@@ -37,6 +36,12 @@ class Verify:
                 return True
             else:
                 return False
+
+    def get_bounds(self):
+        return self.based_polygon.bounds
+
+    def get_centroid(self):
+        return self.based_polygon.centroid
 
     def intersect(self, point: Tuple[float, float]):
         return Point(point).within(self.based_polygon)
@@ -125,10 +130,12 @@ if __name__ == "__main__":
 
                 verify = Verify(polygons[i])
                 if not verify.intersect(centroid):
-                    pass
-                    # print(f'{polygons} failed.')
-                    # plt.imshow(mask)
-                    # plt.show()
+                    print(f'{polygons} failed.')
+                    fig, ax = plt.subplots(1, 2)
+                    ax[0].imshow(images[i].cpu().permute(1, 2, 0).numpy().astype('uint8'))
+                    ax[1].imshow(mask)
+                    plt.savefig(os.path.join("fails", f"captcha_{step - 1}_val.png"))
+
                 else:
                     n_correct += 1
                 n_samples += 1
