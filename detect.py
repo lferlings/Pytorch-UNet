@@ -26,7 +26,7 @@ class DetectSet(Dataset):
         return 1
 
     def __getitem__(self, index):
-        path = r"/home/lennit/Desktop/Kurs/CaptchaVAL/Output/"  # I know thats bad
+        path = r"/home/lennit/Desktop/Kurs/Output/"  # I know thats bad
         image = Image.open(os.path.join(path, f'captcha_{self.item}_val.png'))
 
         image = BasicDataset.preprocess(image, scale=0.5, is_mask=False)

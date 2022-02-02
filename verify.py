@@ -57,7 +57,7 @@ class ValidationSet(Dataset):
         return 10000
 
     def __getitem__(self, index):
-        path = r"/home/lennit/Desktop/Kurs/CaptchaVAL/Output/"  # I know thats bad
+        path = r"/home/lennit/Desktop/Kurs/Output/"  # I know thats bad
         image = Image.open(os.path.join(path, f'captcha_{index}_val.png'))
 
         image = BasicDataset.preprocess(image, scale=0.5, is_mask=False)
@@ -79,7 +79,6 @@ def get_centroid(mask):
             for i in range(len(row)):
                 if row[i] == 1:
                     highest = height
-                    #if is_vaild(mask, i, height):
                     while not mask[height, i] == 0:
                         height += 1
 
@@ -107,20 +106,12 @@ def get_centroid_center_of_gravity(mask):
                     n_one += 1
                     row_sum += h
                     column_sum += column
-    if not n_one == 0:
-        return (column_sum / n_one) * 2, (row_sum / n_one) * 2
-    return 0, 0
 
+    centroid = (column_sum / n_one) * 2, (row_sum / n_one) * 2
+    if not mask[centroid[1]][centroid[0]] == 1:
+        centroid = get_centroid(mask)
 
-def is_vaild(mask, x, y):
-    h = 0
-    for check_x in range(x - 6, x + 6):
-        for check_y in range(y, y + 5):
-            if mask[check_y][check_x] == 1:
-                h += 1
-                if h > 10:
-                    return True
-    return False
+    return centroid
 
 
 if __name__ == "__main__":
@@ -164,7 +155,7 @@ if __name__ == "__main__":
                     fig, ax = plt.subplots(1, 2)
                     ax[0].imshow(images[i].cpu().permute(1, 2, 0).numpy().astype('uint8'))
                     ax[1].imshow(mask)
-                    plt.savefig(os.path.join("fails2", f"captcha_{step - 1}_val.png"))
+                    plt.savefig(os.path.join("fails3", f"captcha_{step - 1}_val.png"))
 
                 else:
                     n_correct += 1
