@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+from __future__ import annotations
 import os
 import pickle
 import time
@@ -68,7 +69,20 @@ class ValidationSet(Dataset):
         }
 
 
+class Counter:
+
+    def __init__(self):
+        self.counter = 0
+
+    def increment(self):
+        self.counter += 1
+
+    def print(self):
+        print(f'Function triggered {self.counter} times')
+
+
 def get_centroid(mask):
+    #counter.increment()
     highest = 0
     lowest = 0
     width = 0
@@ -108,7 +122,7 @@ def get_centroid_center_of_gravity(mask):
                     column_sum += column
 
     centroid = (column_sum / n_one) * 2, (row_sum / n_one) * 2
-    if not mask[centroid[1]][centroid[0]] == 1:
+    if not mask[int(centroid[1] / 2)][int(centroid[0] / 2)] == 1:
         centroid = get_centroid(mask)
 
     return centroid
@@ -131,6 +145,8 @@ if __name__ == "__main__":
     dataset = ValidationSet()
     data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=0, shuffle=False)
 
+    counter = Counter()
+
     step = 0
     for batch in data_loader:
         step += 1
@@ -149,8 +165,8 @@ if __name__ == "__main__":
                 mask = mask.cpu().numpy()
                 centroid = get_centroid_center_of_gravity(mask)
 
-                verify = Verify(polygons[i])
-                if not verify.intersect(centroid):
+                verify_instance = Verify(polygons[i])
+                if not verify_instance.intersect(centroid):
                     print(f'{polygons} failed.')
                     fig, ax = plt.subplots(1, 2)
                     ax[0].imshow(images[i].cpu().permute(1, 2, 0).numpy().astype('uint8'))
@@ -167,3 +183,4 @@ if __name__ == "__main__":
     print('Testing finished.')
     print(f'Process took {(end - start) / 60} min, that\'s an average of {(end - start) /10000} seconds per image!')
     print(f'Result: {n_correct} of {n_samples} correct -> {n_correct/n_samples * 100}%')
+    counter.print()

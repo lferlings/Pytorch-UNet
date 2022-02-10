@@ -65,4 +65,5 @@ if __name__ == '__main__':
         fig, ax = plt.subplots(1, 2)
         ax[0].imshow(image_as_list[0].cpu().permute(1, 2, 0).numpy().astype('uint8'))
         ax[1].imshow(mask)
+        plt.savefig(os.path.join("customplots", f"captcha_{sys.argv[1]}_val.png"), dpi=300, transparent=True)
         plt.show()
