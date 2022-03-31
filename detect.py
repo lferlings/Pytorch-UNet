@@ -26,7 +26,7 @@ class DetectSet(Dataset):
         return 1
 
     def __getitem__(self, index):
-        path = r"/home/lennit/Desktop/Kurs/Output/"  # I know thats bad
+        path = r"/home/lennit/Desktop/Kurs/Output/"  # Path to captcha folder
         image = Image.open(os.path.join(path, f'captcha_{self.item}_val.png'))
 
         image = BasicDataset.preprocess(image, scale=0.5, is_mask=False)
@@ -46,6 +46,8 @@ if __name__ == '__main__':
 
     dataset = DetectSet()
     data_loader = DataLoader(dataset, batch_size=1, num_workers=0, shuffle=False)
+    if not os.path.isdir("customplots"):
+        os.mkdir("customplots")
 
     for batch in data_loader:
         image_as_list = batch['image']

@@ -2,7 +2,6 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-import os
 
 import torch
 import torch.nn as nn
@@ -11,12 +10,11 @@ import wandb
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-import matplotlib as plt
 
-from utils.data_loading import BasicDataset, CarvanaDataset
-from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
+from utils.data_loading import BasicDataset
+from utils.dice_score import dice_loss
 
 dir_img = Path('./data/imgs/')
 dir_mask = Path('./data/masks/')

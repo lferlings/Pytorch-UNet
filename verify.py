@@ -5,21 +5,13 @@ import time
 from typing import Tuple
 
 import matplotlib.pyplot as plt
-from PIL import Image
-
-from shapely.geometry import Polygon, Point
-
 import torch
+from PIL import Image
+from shapely.geometry import Polygon, Point
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import transforms
-import torch.nn.functional as F
-from tqdm import tqdm
 
-import predict
-from utils import data_loading
 from unet import UNet
 from utils.data_loading import BasicDataset
-from utils import utils
 
 
 class Verify:
@@ -154,6 +146,9 @@ if __name__ == "__main__":
 
         images = images.to(device=device, dtype=torch.float32)
 
+        if not os.path.isdir("fails"):
+            os.mkdir("fails")
+
         with torch.cuda.amp.autocast(enabled=True):
             pred = net(images)
 
@@ -170,7 +165,7 @@ if __name__ == "__main__":
                     fig, ax = plt.subplots(1, 2)
                     ax[0].imshow(images[i].cpu().permute(1, 2, 0).numpy().astype('uint8'))
                     ax[1].imshow(mask)
-                    plt.savefig(os.path.join("fails3", f"captcha_{step - 1}_val.png"))
+                    plt.savefig(os.path.join("fails", f"captcha_{step - 1}_val.png"))
 
                 else:
                     n_correct += 1
